@@ -111,10 +111,13 @@ fn rows(board: &Vec<Vec<i32>>, figure: &Vec<Vec<i32>>, x: usize, y: usize) -> i3
 
 fn holes(board: &Vec<Vec<i32>>, figure: &Vec<Vec<i32>>, x: usize, y: usize) -> i32 {
     let mut res: i32 = 0;
-    for i in 1..board.len() {
-        for j in 0..board[0].len() {
-            if !occupied(board, figure, x, y, i, j) && occupied(board, figure, x, y, i - 1, j) {
-                res += 10;
+    for j in 0..board[0].len() {
+        let mut top: i32 = 0;
+        for i in 1..board.len() {
+            if occupied(board, figure, x, y, i, j) {
+                top += 1;
+            } else if top > 0 {
+                res += 10 + 5*top;
             }
         }
     }
@@ -156,12 +159,11 @@ fn eval_position(board: &Vec<Vec<i32>>, figure: &Vec<Vec<i32>>, x: usize, y: usi
     let my_holes: i64 = holes(board, figure, low_x, y) as i64;
     let my_height: i64 = height(board, figure, low_x, y) as i64;
     let my_longest_row: i64 = get_longest_row(board, figure, low_x, y) as i64;
-    let res: i64 = my_rows * 1000 - my_holes * 5 - my_height * 10 + my_longest_row;
+    let res: i64 = my_rows * 10 - my_holes * 5 - my_height * 10 + my_longest_row;
     //println!("rows: {}, holes: {}, height: {}, long_row: {}, eval: {}", my_rows, my_holes, my_height, my_longest_row, res);
     res
 }
 
-//fn spawn_new_figure(board: &Vec<Vec<i32>>, figure: &Vec<Vec<i32>>) -> (bool, &Vec<Vec<i32>>, usize) {
 fn spawn_new_figure<'a>(
     board: &'a Vec<Vec<i32>>,
     figure: &'a Vec<Vec<i32>>,
@@ -292,7 +294,13 @@ fn eliminate_row(board: &mut Vec<Vec<i32>>, row: usize) {
     }
 }
 
-fn fix_figure(board: &mut Vec<Vec<i32>>, figure: &Vec<Vec<i32>>, x: usize, y: usize) {
+fn fix_figure(
+    board: &mut Vec<Vec<i32>>,
+    figure: &Vec<Vec<i32>>,
+    x: usize,
+    y: usize,
+    score: &mut u32,
+) {
     for i in 0..figure.len() {
         for j in 0..figure[0].len() {
             if figure[i][j] > 0 {
@@ -300,6 +308,7 @@ fn fix_figure(board: &mut Vec<Vec<i32>>, figure: &Vec<Vec<i32>>, x: usize, y: us
             }
         }
     }
+    let mut eliminated_lines: u32 = 0;
     for i in 0..board.len() {
         let mut empty: bool = false;
         for j in 0..board[0].len() {
@@ -310,8 +319,14 @@ fn fix_figure(board: &mut Vec<Vec<i32>>, figure: &Vec<Vec<i32>>, x: usize, y: us
         }
         if !empty {
             eliminate_row(board, i);
+            if eliminated_lines == 0 {
+                eliminated_lines = 100;
+            } else {
+                eliminated_lines *= 2;
+            }
         }
     }
+    *score += eliminated_lines;
 }
 
 fn tetris() {
@@ -324,20 +339,19 @@ fn tetris() {
     let mut rotation: usize;
     let mut rotations: Vec<Vec<Vec<i32>>>;
     let mut valid_figure: bool = false;
+    let mut score: u32 = 0;
     loop {
         if !valid_figure {
             x = 0;
             let chosen_figure: &Vec<Vec<i32>> = figures.choose(&mut rand::thread_rng()).unwrap();
             (we_lost, rotation, y) = spawn_new_figure(&board, chosen_figure);
-            //figure = get_rotations(chosen_figure)[rotation];
             rotations = get_rotations(chosen_figure);
             figure = &rotations[rotation];
             valid_figure = true
         } else {
             x += 1;
             if touches_stuff(&board, figure, x, y) {
-                fix_figure(&mut board, figure, x, y);
-                //figure = &Vec::new();
+                fix_figure(&mut board, figure, x, y, &mut score);
                 valid_figure = false;
             }
         }
@@ -345,9 +359,10 @@ fn tetris() {
             break;
         }
         print_board(&board, figure, figure.len() > 0, x, y);
-        println!("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
-        thread::sleep(time::Duration::from_millis(100));
+        println!("%%%%%%%%%%%%%%%%%%%% {}", score);
+        thread::sleep(time::Duration::from_millis(30));
     }
+    println!("Final score: {}", score);
 }
 
 fn main() {
