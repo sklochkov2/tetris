@@ -17,6 +17,10 @@ fn all_the_pieces() -> Vec<Vec<Vec<i32>>> {
     let mut left_g: Vec<Vec<i32>> = Vec::new();
     let mut left_snake: Vec<Vec<i32>> = Vec::new();
     let mut right_snake: Vec<Vec<i32>> = Vec::new();
+    let mut short_stick: Vec<Vec<i32>> = Vec::new();
+    let mut medium_stick: Vec<Vec<i32>> = Vec::new();
+    let mut junior: Vec<Vec<i32>> = Vec::new();
+    let mut triforce: Vec<Vec<i32>> = Vec::new();
     stick.push(vec![1, 1, 1, 1]);
     square.push(vec![2, 2]);
     square.push(vec![2, 2]);
@@ -32,6 +36,11 @@ fn all_the_pieces() -> Vec<Vec<Vec<i32>>> {
     right_snake.push(vec![0, 7]);
     right_snake.push(vec![7, 7]);
     right_snake.push(vec![7, 0]);
+    short_stick.push(vec![1, 1]);
+    medium_stick.push(vec![1, 1, 1]);
+    junior.push(vec![1]);
+    triforce.push(vec![0, 2]);
+    triforce.push(vec![2, 2]);
     vec![
         stick,
         square,
@@ -40,6 +49,10 @@ fn all_the_pieces() -> Vec<Vec<Vec<i32>>> {
         left_g,
         left_snake,
         right_snake,
+        //short_stick,
+        //medium_stick,
+        //junior,
+        //triforce,
     ]
 }
 
@@ -153,13 +166,36 @@ fn get_longest_row(board: &Vec<Vec<i32>>, figure: &Vec<Vec<i32>>, x: usize, y: u
     res
 }
 
+fn almist_complete_rows(board: &Vec<Vec<i32>>, figure: &Vec<Vec<i32>>, x: usize, y: usize) -> i32 {
+    let mut res: i32 = 0;
+    for i in 0..board.len() {
+        let mut curr: i32 = 0;
+        for j in 0..board[0].len() {
+            if occupied(board, figure, x, y, i, j) {
+                curr += 1;
+            }
+        }
+        if curr == 16 {
+            res += 100;
+        } else if curr == 15 {
+            res += 10;
+        } else if curr == 14 {
+            res += 2;
+        } else if curr == 13 {
+            res += 1;
+        }
+    }
+    res
+}
+
 fn eval_position(board: &Vec<Vec<i32>>, figure: &Vec<Vec<i32>>, x: usize, y: usize) -> i64 {
     let low_x: usize = get_lowest_x(board, figure, x, y);
     let my_rows: i64 = rows(board, figure, low_x, y) as i64;
     let my_holes: i64 = holes(board, figure, low_x, y) as i64;
     let my_height: i64 = height(board, figure, low_x, y) as i64;
     let my_longest_row: i64 = get_longest_row(board, figure, low_x, y) as i64;
-    let res: i64 = my_rows * 10 - my_holes * 5 - my_height * 10 + my_longest_row;
+    let long_rows: i64 = almist_complete_rows(board, figure, low_x, y) as i64;
+    let res: i64 = my_rows - my_holes * 5 - my_height * 10 + my_longest_row + long_rows * 10;
     //println!("rows: {}, holes: {}, height: {}, long_row: {}, eval: {}", my_rows, my_holes, my_height, my_longest_row, res);
     res
 }
